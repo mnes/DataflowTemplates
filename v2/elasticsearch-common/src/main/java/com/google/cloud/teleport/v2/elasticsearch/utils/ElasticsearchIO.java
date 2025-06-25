@@ -227,6 +227,12 @@ public class ElasticsearchIO {
           String type = error.path("type").asText();
           String reason = error.path("reason").asText();
           String docId = errorRoot.path("_id").asText();
+
+          // Skip version conflict error
+          if ("version_conflict_engine_exception".contains(type)) {
+            continue;
+          }
+
           errorMessages.append(String.format("%nDocument id %s: %s (%s)", docId, reason, type));
           JsonNode causedBy = error.get("caused_by");
           if (causedBy != null) {
@@ -236,7 +242,11 @@ public class ElasticsearchIO {
           }
         }
       }
-      throw new IOException(errorMessages.toString());
+
+      // If other errors, throw exception
+      if (!errorMessages.toString().contains("Error writing to Elasticsearch, some elements could not be inserted:")) {
+        throw new IOException(errorMessages.toString());
+      }
     }
   }
 
